@@ -79,32 +79,38 @@ cd Baxter
 python -m venv .venv
 # Activate venv (Windows: .venv\Scripts\activate | Mac/Linux: source .venv/bin/activate)
 pip install -r requirements.txt
-2. Environment Variables
+```
+### 2. Environment Variables
 Create a .env file in the root directory:
 
-env
+```env
 MONGODB_URI="mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority"
 DATABASE_NAME="baxter_db"
 SECRET_KEY="your_super_secret_jwt_key"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=60
-3. Start MLflow Server
+```
+### 3. Start MLflow Server
 Open a terminal and run:
 
-bash
+```bash
 mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 127.0.0.1 --port 5000
-4. Train the Model & Seed DB
+```
+### 4. Train the Model & Seed DB
 Open a new terminal:
 
-bash
+```bash
 python -m ml_engine.train
 python seed_db.py
-5. Run the Application
-Terminal 1 (Backend):
+```
+### 5. Run the Application
+#### Terminal 1 (Backend):
 
-bash
+```bash
 uvicorn api.main:app --reload
-Terminal 2 (Frontend):
+```
+#### Terminal 2 (Frontend):
 
-bash
+```bash
 streamlit run app/streamlit_app.py
+```
