@@ -1,0 +1,56 @@
+# ==========================================
+# 1. Environment Variables & Secrets (CRITICAL)
+# ==========================================
+.env
+*.env
+.env.local
+.env.production
+
+# ==========================================
+# 2. Python & Virtual Environments
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+
+# ==========================================
+# 3. Machine Learning Artifacts (Too large for Git)
+# ==========================================
+# Trained Models
+models/
+*.keras
+*.h5
+*.pkl
+*.joblib
+
+# MLflow Tracking Data
+mlruns/
+mlflow.db
+mlruns.db
+
+# ==========================================
+# 4. Data (Keep the raw CSV, ignore processed)
+# ==========================================
+data/processed/
+data/exports/
+*.csv.gz
+
+# ==========================================
+# 5. Reports & Logs
+# ==========================================
+*.log
+reports/figures/*.png
+reports/*.json
+
+# ==========================================
+# 6. IDEs & OS Files
+# ==========================================
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-bg: #1e1e2f;
+    --secondary-bg: #2a2a40;
+    --text-color: #ffffff;
+    --text-muted: #a0a0b0;
+    --accent-color: #7c3aed;
+    --accent-gradient: linear-gradient(135deg, #7c3aed, #3b82f6);
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --card-border: rgba(255, 255, 255, 0.08);
+}
+
+/* --- Hide Default Streamlit Header --- */
+header[data-testid="stHeader"] {
+    display: none;
+}
+
+/* --- Main App Background & Font --- */
+[data-testid="stAppViewContainer"] {
+    background-color: var(--primary-bg);
+    color: var(--text-color);
+    font-family: 'Inter', sans-serif;
+}
+
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* --- Sidebar Styling --- */
+[data-testid="stSidebar"] {
+    background-color: var(--primary-bg);
+    border-right: 1px solid var(--card-border);
+}
+
+[data-testid="stSidebarNav"] {
+    padding-top: 2rem;
+}
+
+/* --- Custom Cards (The Magic Container) --- */
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border) !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.15) !important;
+    backdrop-filter: blur(12px);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"]:hover {
+    border-color: rgba(124, 58, 237, 0.4) !important;
+    transform: translateY(-2px);
+}
+
+/* --- Inputs --- */
+div[data-baseweb="input"], div[data-baseweb="select"] {
+    background-color: var(--secondary-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 8px !important;
+    color: white !important;
+}
+
+div[data-baseweb="input"] input {
+    color: white !important;
+}
+
+/* --- Buttons --- */
+.stButton > button {
+    background: var(--accent-gradient);
+    color: white !important;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 24px;
+    font-weight: 600;
+    width: 100%;
+    transition: opacity 0.2s;
+}
+
+.stButton > button:hover {
+    opacity: 0.85;
+}
+
+/* --- Metrics --- */
+[data-testid="stMetricValue"] {
+    font-size: 2.5rem !important;
+    font-weight: 700 !important;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* --- Tabs --- */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 15px;
+    background-color: transparent;
+}
+
+.stTabs [data-baseweb="tab"] {
+    padding: 10px 20px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+}
+
+.stTabs [aria-selected="true"] {
+    background: var(--accent-gradient) !important;
+    color: white !important;
+    border: none !important;
+}
