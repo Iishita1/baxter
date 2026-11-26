@@ -10,14 +10,17 @@ from api.auth import get_current_prof, get_current_admin
 from api.routes.predict_routes import load_artifacts, model, preprocessor
 import pandas as pd
 
+# This is the line that was missing!
 router = APIRouter(prefix="/api/feedback", tags=["Feedback Loop"])
 
 class EvaluateRequest(BaseModel):
     roll_no: str
     subject: str
-    mst_marks: float
+    mst1_marks: float
+    mst2_marks: float
     finals_marks: float
-    max_mst: float
+    max_mst1: float
+    max_mst2: float
     max_finals: float
     metadata: dict = {}
 
@@ -25,9 +28,9 @@ class EvaluateRequest(BaseModel):
 async def evaluate_and_log(data: EvaluateRequest, db=Depends(get_db), prof=Depends(get_current_prof)):
     load_artifacts() # Ensure model is loaded
     
-    # 1. Prepare DNN Payload
-    g1 = (data.mst_marks / data.max_mst) * 20 if data.max_mst > 0 else 0
-    g2 = (data.finals_marks / data.max_finals) * 20 if data.max_finals > 0 else 0
+    # 1. Prepare DNN Payload (Map MST1/MST2 to G1/G2)
+    g1 = (data.mst1_marks / data.max_mst1) * 20 if data.max_mst1 > 0 else 0
+    g2 = (data.mst2_marks / data.max_mst2) * 20 if data.max_mst2 > 0 else 0
     
     payload = {
         "age": 17, "absences": 0, "failures": 0, "Medu": 2, "Fedu": 2,
@@ -52,8 +55,8 @@ async def evaluate_and_log(data: EvaluateRequest, db=Depends(get_db), prof=Depen
     predicted_class = "Pass" if prob >= 0.5 else "Fail"
     
     # 3. Actual Result (Passing is >= 40% total)
-    total_marks = data.mst_marks + data.finals_marks
-    max_total = data.max_mst + data.max_finals
+    total_marks = data.mst1_marks + data.mst2_marks + data.finals_marks
+    max_total = data.max_mst1 + data.max_mst2 + data.max_finals
     actual_percentage = (total_marks / max_total * 100) if max_total > 0 else 0
     actual_class = "Pass" if actual_percentage >= 40.0 else "Fail"
     
@@ -62,8 +65,9 @@ async def evaluate_and_log(data: EvaluateRequest, db=Depends(get_db), prof=Depen
         "timestamp": datetime.now(timezone.utc),
         "roll_no": data.roll_no,
         "subject": data.subject,
-        "mst": data.mst_marks,
-        "finals": data.finals_marks,
+        "mst1": data.mst1_marks,
+        "mst2": data.mst2_marks,
+        "finals_g3": data.finals_marks,
         "total_percentage": round(actual_percentage, 1),
         "predicted_prob": round(prob, 4),
         "predicted_class": predicted_class,

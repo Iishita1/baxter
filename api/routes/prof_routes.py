@@ -21,10 +21,11 @@ async def get_all_students(db=Depends(get_db), prof=Depends(get_current_prof)):
         student["academics"] = record if record else None
     return students
 
+# Replace your update_marks route:
 @router.post("/marks")
 async def update_marks(record: AcademicRecord, db=Depends(get_db), prof=Depends(get_current_prof)):
     subject = get_prof_subject(prof)
-    record.subject = subject # Force the subject to be the prof's subject
+    record.subject = subject
     
     existing = db.academics.find_one({"roll_no": record.roll_no, "subject": subject})
     now = datetime.now(timezone.utc)
@@ -35,18 +36,18 @@ async def update_marks(record: AcademicRecord, db=Depends(get_db), prof=Depends(
             if last_updated.tzinfo is None:
                 last_updated = last_updated.replace(tzinfo=timezone.utc)
             if now - last_updated > timedelta(hours=24):
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="24-hour limit exceeded. Cannot update marks. Contact Admin for override."
-                )
-        record_dict = record.model_dump()
-        record_dict["last_updated"] = now
-        db.academics.update_one({"roll_no": record.roll_no, "subject": subject}, {"$set": record_dict})
+                raise HTTPException(status_code=403, detail="24-hour limit exceeded.")
+        db.academics.update_one({"roll_no": record.roll_no, "subject": subject}, {"$set": record.model_dump() | {"last_updated": now}})
     else:
-        record_dict = record.model_dump()
-        record_dict["last_updated"] = now
-        db.academics.insert_one(record_dict)
-    return {"message": f"Marks for {record.roll_no} ({subject}) updated successfully."}
+        db.academics.insert_one(record.model_dump() | {"last_updated": now})
+    return {"message": f"Marks for {record.roll_no} updated."}
+
+# Update config routes:
+@router.get("/config")
+async def get_class_config(db=Depends(get_db), prof=Depends(get_current_prof)):
+    subject = get_prof_subject(prof)
+    config = db.config.find_one({"subject": subject}, {"_id": 0})
+    return config if config else {"subject": subject, "max_mst1": 20.0, "max_mst2": 20.0, "max_finals": 60.0}
 
 @router.get("/attendance/{date_str}")
 async def get_attendance_register(date_str: str, db=Depends(get_db), prof=Depends(get_current_prof)):
@@ -100,12 +101,6 @@ async def save_attendance_register(date_str: str, payload: AttendanceBulkUpdate,
         elif record.status == "Not Marked":
             db.attendance.delete_one({"roll_no": record.roll_no, "date": date_str, "subject": subject})
     return {"message": f"Attendance saved for {date_str} ({subject})"}
-
-@router.get("/config")
-async def get_class_config(db=Depends(get_db), prof=Depends(get_current_prof)):
-    subject = get_prof_subject(prof)
-    config = db.config.find_one({"subject": subject}, {"_id": 0})
-    return config if config else {"subject": subject, "max_mst": 30.0, "max_finals": 70.0}
 
 @router.post("/config")
 async def update_class_config(config: dict, db=Depends(get_db), prof=Depends(get_current_prof)):

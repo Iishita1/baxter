@@ -8,10 +8,14 @@ def load_and_preprocess_data(filepath="data/raw/student-por.csv"):
     # UCI dataset uses ';' separator
     df = pd.read_csv(filepath, sep=";")
     
-    # Target: 1 if pass (G3 >= 10), else 0
+    # Target 1: Classification (Pass/Fail)
     df["pass"] = (df["G3"] >= 10).astype(int)
+    y_class = df["pass"]
     
-    # Benchmark Model Features (Including G1 and G2)
+    # Target 2: Regression (Actual G3 Score)
+    y_reg = df["G3"]
+    
+    # Features
     num_cols = ['age', 'absences', 'failures', 'Medu', 'Fedu', 'famrel', 
                 'freetime', 'goout', 'Dalc', 'Walc', 'health', 'G1', 'G2']
     cat_cols = ['school', 'sex', 'address', 'famsize', 'Pstatus', 'Mjob', 
@@ -19,11 +23,10 @@ def load_and_preprocess_data(filepath="data/raw/student-por.csv"):
                 'activities', 'nursery', 'higher', 'internet', 'romantic']
     
     X = df[num_cols + cat_cols]
-    y = df["pass"]
     
-    # Train/Test Split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.2, random_state=42, stratify=y
+    # Train/Test Split (Splitting X, y_class, and y_reg together!)
+    X_train, X_test, y_train, y_test, y_train_reg, y_test_reg = train_test_split(
+        X, y_class, y_reg, test_size=0.2, random_state=42, stratify=y_class
     )
     
     # Preprocessing Pipeline
@@ -36,4 +39,5 @@ def load_and_preprocess_data(filepath="data/raw/student-por.csv"):
     X_train_processed = preprocessor.fit_transform(X_train)
     X_test_processed = preprocessor.transform(X_test)
     
-    return X_train_processed, X_test_processed, y_train, y_test, preprocessor
+    # Return both targets
+    return X_train_processed, X_test_processed, y_train, y_test, y_train_reg, y_test_reg, preprocessor

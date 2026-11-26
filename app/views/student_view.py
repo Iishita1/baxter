@@ -26,6 +26,12 @@ def render():
     acad = dash.get("academics") or {}
     att = dash.get("attendance") or {}
     
+    # Fetch config for max marks (used in DNN mapping and What-If)
+    config = get_student_subject_config(token, subject)
+    max_mst1 = float(config.get("max_mst1", 20.0))
+    max_mst2 = float(config.get("max_mst2", 20.0))
+    max_finals = float(config.get("max_finals", 60.0))
+    
     # Fetch goals early so we can use the latest one as a sticky note
     goals = get_student_goals(token, subject)
     latest_goal = goals[0] if goals else None
@@ -39,7 +45,6 @@ def render():
         # --- Sticky Note (Active Goals) ---
         if latest_goal and (latest_goal.get("daily_goal") or latest_goal.get("monthly_goal")):
             with st.container(border=True):
-                # Give it a subtle sticky-note look using a colored border/markdown
                 st.markdown("### 📌 Active Goals")
                 col_d, col_w, col_m = st.columns(3)
                 
@@ -52,14 +57,17 @@ def render():
             st.write("")
 
         # Custom Metric Cards Row
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             with st.container(border=True):
-                st.metric("MST Marks", acad.get('mst_marks', '-'))
+                st.metric("MST 1", acad.get('mst1_marks', '-'))
         with col2:
             with st.container(border=True):
-                st.metric("Finals Marks", acad.get('finals_marks', '-'))
+                st.metric("MST 2", acad.get('mst2_marks', '-'))
         with col3:
+            with st.container(border=True):
+                st.metric("Finals", acad.get('finals_marks', '-'))
+        with col4:
             with st.container(border=True):
                 st.metric("Attendance", f"{att.get('percentage', 100)}%")
 
@@ -86,13 +94,16 @@ def render():
         # DNN Risk Analysis
         with col_risk:
             with st.container(border=True):
-                st.markdown("### 🧠 AI Risk Analysis")
-                st.write("Powered by the Baxter Deep Neural Network.")
+                st.markdown("### 🧠 AI Performance Analysis")
                 
-                if acad.get("mst_marks") is not None:
-                    g1 = min(20, (acad.get("mst_marks", 0) / 30.0) * 20) 
-                    g2 = min(20, (acad.get("finals_marks", 0) / 70.0) * 20)
+                # FIX: Check if keys exist in the dictionary to prevent false "No Data"
+                if acad and "mst1_marks" in acad and "mst2_marks" in acad:
                     
+                    # 1. Map dynamic marks (MST1/MST2) to UCI G1/G2 (0-20 scale)
+                    g1 = min(20, (acad.get("mst1_marks", 0) / max_mst1) * 20) if max_mst1 > 0 else 0
+                    g2 = min(20, (acad.get("mst2_marks", 0) / max_mst2) * 20) if max_mst2 > 0 else 0
+                    
+                    # 2. Start with default fallback data
                     payload = {
                         "age": 17, "absences": att.get("absent", 0), "failures": acad.get("failures", 0),
                         "Medu": 2, "Fedu": 2, "famrel": 4, "freetime": 3, "goout": 3,
@@ -104,27 +115,43 @@ def render():
                         "higher": "yes", "internet": "yes", "romantic": "no"
                     }
                     
+                    # 3. Override with uploaded metadata (Admin's static data)
                     if dash.get("metadata"):
                         for k, v in dash["metadata"].items():
                             if k in payload:
                                 payload[k] = v
                                 
+                    # 4. Override with live data
                     payload["absences"] = att.get("absent", payload.get("absences", 0))
                     payload["G1"] = int(g1)
                     payload["G2"] = int(g2)
                     
                     res = predict_student(token, payload)
                     if res.status_code == 200:
-                        risk = res.json().get("risk_level")
+                        data = res.json()
+                        risk = data.get("risk_level")
+                        pred_score = data.get("predicted_score")
                         
+                        # 1. Show Classification (Risk Level)
+                        st.markdown("#### Risk Classification")
                         if risk == "High":
-                            st.error(f"🚨 **Current Risk Level: {risk}**\n\nYour current trajectory suggests a high risk of failing. Please focus on your studies and attend classes.")
+                            st.error(f"🚨 **Risk Level: {risk}**\n\nYour current trajectory suggests a high risk of failing. Please focus on your studies and attend classes.")
                         elif risk == "Medium":
-                            st.warning(f"⚠️ **Current Risk Level: {risk}**\n\nYou are on the borderline. There is room for improvement.")
+                            st.warning(f"⚠️ **Risk Level: {risk}**\n\nYou are on the borderline. There is room for improvement.")
                         else:
-                            st.success(f"✅ **Current Risk Level: {risk}**\n\nYou are on track to pass. Keep up the great work!")
+                            st.success(f"✅ **Risk Level: {risk}**\n\nYou are on track to pass. Keep up the great work!")
+                        
+                        st.divider()
+                        
+                        # 2. Show Regression (Expected Score)
+                        st.markdown("#### Expected Final Grade")
+                        if pred_score is not None:
+                            scaled_score = (pred_score / 20.0) * max_finals
+                            st.info(f"Based on your current MST trajectory, the model predicts you will score around **{scaled_score:.2f} / {max_finals}** in the Finals (G3).")
+                        else:
+                            st.write("Regression model not found.")
                 else:
-                    st.info("Marks have not been updated by your professor yet.")
+                    st.info("AI Prediction requires both MST1 and MST2 to be graded by your professor.")
 
     # ==========================================
     # TAB 2: Goals & Logs
@@ -164,10 +191,8 @@ def render():
             
             if goals:
                 df_goals = pd.DataFrame(goals)
-                # Expanded columns to show everything
                 display_cols = ["date", "study_hours", "expected_grade", "daily_goal", "weekly_goal", "monthly_goal", "daily_review"]
                 display_cols = [c for c in display_cols if c in df_goals.columns]
-                
                 st.dataframe(df_goals[display_cols], use_container_width=True)
             else:
                 st.info("No logs found yet. Start tracking your progress!")
@@ -179,31 +204,39 @@ def render():
         with st.container(border=True):
             st.markdown(f"### Grade Calculator ({subject})")
             
-            config = get_student_subject_config(token, subject)
-            max_mst = float(config.get("max_mst", 30.0))
-            max_finals = float(config.get("max_finals", 70.0))
-            
-            st.write(f"Calculating based on class totals: **MST ({max_mst})**, **Finals ({max_finals})**.")
+            st.write(f"Calculating based on class totals: **MST1 ({max_mst1})**, **MST2 ({max_mst2})**, **Finals ({max_finals})**.")
             
             with st.form("what_if_form"):
-                default_mst = float(acad.get("mst_marks", 0.0))
+                default_mst1 = float(acad.get("mst1_marks", 0.0))
+                default_mst2 = float(acad.get("mst2_marks", 0.0))
                 
-                # Safety check to prevent Streamlit crash if marks exceed max config
-                safe_max = max(float(max_mst), default_mst)
+                # Safety checks to prevent Streamlit crash if marks exceed max config
+                safe_max_mst1 = max(float(max_mst1), default_mst1)
+                safe_max_mst2 = max(float(max_mst2), default_mst2)
                 
-                current_mst = st.number_input(
-                    f"Your MST Marks (out of {max_mst})", 
-                    min_value=0.0, 
-                    max_value=safe_max, 
-                    value=min(default_mst, safe_max)
-                )
+                col1, col2 = st.columns(2)
+                with col1:
+                    current_mst1 = st.number_input(
+                        f"Your MST 1 Marks (out of {max_mst1})", 
+                        min_value=0.0, 
+                        max_value=safe_max_mst1, 
+                        value=min(default_mst1, safe_max_mst1)
+                    )
+                with col2:
+                    current_mst2 = st.number_input(
+                        f"Your MST 2 Marks (out of {max_mst2})", 
+                        min_value=0.0, 
+                        max_value=safe_max_mst2, 
+                        value=min(default_mst2, safe_max_mst2)
+                    )
                 
                 target_grade = st.selectbox("Target Grade", ["O", "A+", "A", "B+", "B", "C", "P"])
                 
                 if st.form_submit_button("Calculate"):
                     res = calculate_what_if(token, {
                         "subject": subject, 
-                        "mst_marks": current_mst, 
+                        "current_mst1": current_mst1, 
+                        "current_mst2": current_mst2,
                         "target_grade": target_grade
                     })
                     

@@ -28,28 +28,11 @@ class UserCreate(UserBase):
 class UserInDB(UserBase):
     hashed_password: str
 
-# --- Academic Schemas ---
-class AcademicRecord(BaseModel):
-    roll_no: str
-    subject: Optional[str] = None  # <-- CHANGED TO OPTIONAL
-    mst_marks: float
-    finals_marks: float
-    absences: int
-    failures: int
-    studytime: int
-    attendance_percent: Optional[float] = 0.0
-    last_updated: Optional[datetime] = None
-
 # --- Attendance Schemas ---
 class AttendanceRecord(BaseModel):
     roll_no: str
     subject: Optional[str] = None  # <-- CHANGED TO OPTIONAL
     status: str 
-
-class ClassConfig(BaseModel):
-    subject: str # NEW
-    max_mst: float = 30.0
-    max_finals: float = 70.0
 
 class AttendanceBulkUpdate(BaseModel):
     records: List[AttendanceRecord]
@@ -65,20 +48,41 @@ class StudentGoalLog(BaseModel):
     monthly_goal: str
     daily_review: Optional[str] = None
 
-class WhatIfRequest(BaseModel):
-    subject: str # NEW
-    mst_marks: float
-    target_grade: str
-
-# --- Admin Schemas ---
-class AdminOverrideMarks(BaseModel):
-    roll_no: str
-    subject: str # NEW
-    mst_marks: float
-    finals_marks: float
-
 class AdminOverrideAttendance(BaseModel):
     roll_no: str
     subject: str # NEW
     date: str
     status: str
+
+# ... (keep other schemas)
+
+class AcademicRecord(BaseModel):
+    roll_no: str
+    subject: Optional[str] = None
+    mst1_marks: float
+    mst2_marks: float
+    finals_marks: float # This is G3
+    absences: int
+    failures: int
+    studytime: int
+    attendance_percent: Optional[float] = 0.0
+    last_updated: Optional[datetime] = None
+
+class ClassConfig(BaseModel):
+    subject: str
+    max_mst1: float = 20.0
+    max_mst2: float = 20.0
+    max_finals: float = 60.0
+
+class AdminOverrideMarks(BaseModel):
+    roll_no: str
+    subject: str
+    mst1_marks: float
+    mst2_marks: float
+    finals_marks: float
+
+class WhatIfRequest(BaseModel):
+    subject: str
+    current_mst1: float
+    current_mst2: float
+    target_grade: str

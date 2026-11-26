@@ -45,28 +45,25 @@ async def get_student_goals(subject: str, db=Depends(get_db), student=Depends(ge
 @router.post("/what-if")
 async def calculate_what_if(req: WhatIfRequest, db=Depends(get_db), student=Depends(get_current_student)):
     grade_map = {"O": 80, "A+": 70, "A": 60, "B+": 55, "B": 50, "C": 45, "P": 40, "F": 0}
-    if req.target_grade not in grade_map:
-        raise HTTPException(status_code=400, detail="Invalid target grade")
-        
     target_total = grade_map[req.target_grade]
-    config = db.config.find_one({"subject": req.subject}, {"_id": 0}) or {"max_mst": 30.0, "max_finals": 70.0}
-    max_mst = config.get("max_mst", 30.0)
-    max_finals = config.get("max_finals", 70.0)
-    total_max = max_mst + max_finals
     
-    scaled_target = (target_total / 100.0) * total_max
-    required_finals = scaled_target - req.mst_marks
+    config = db.config.find_one({"subject": req.subject}, {"_id": 0}) or {"max_mst1": 20.0, "max_mst2": 20.0, "max_finals": 60.0}
+    max_total = config["max_mst1"] + config["max_mst2"] + config["max_finals"]
+    
+    # Scale target out of class max
+    scaled_target = (target_total / 100.0) * max_total
+    
+    current_total = req.current_mst1 + req.current_mst2
+    required_finals = scaled_target - current_total
     
     if required_finals <= 0:
-        msg = f"You have already secured enough marks in MST to achieve a {req.target_grade}!"
-        required_finals = 0
-    elif required_finals > max_finals:
-        msg = f"It is mathematically impossible to get a {req.target_grade} even with {max_finals} in Finals."
-        required_finals = max_finals
+        msg = f"You have already secured enough marks in MSTs to achieve a {req.target_grade}!"
+    elif required_finals > config["max_finals"]:
+        msg = f"It is mathematically impossible to get a {req.target_grade} (Requires {required_finals:.1f})."
     else:
-        msg = f"You need {round(required_finals, 1)}/{max_finals} in Finals to get a {req.target_grade}."
+        msg = f"You need {round(required_finals, 1)} / {config['max_finals']} in Finals to get a {req.target_grade}."
         
-    return {"required_finals": required_finals, "message": msg, "target_total": scaled_target}
+    return {"message": msg}
 
 @router.get("/config/{subject}")
 async def get_subject_config_public(subject: str, db=Depends(get_db), student=Depends(get_current_student)):

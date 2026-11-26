@@ -185,20 +185,27 @@ romantic: no"""
                     st.info(f"Found Student: **{student['name']}** ({student['roll_no']})")
                     col_m, col_a = st.columns(2)
                     
-                    # Override Marks
+                    # --- UPDATED OVERRIDE MARKS FORM ---
                     with col_m:
                         with st.form("override_marks"):
                             st.markdown("#### Override Marks")
                             subj = st.text_input("Subject", "Mathematics")
-                            mst = st.number_input("MST Marks", 0.0, 100.0)
-                            finals = st.number_input("Finals Marks", 0.0, 100.0)
+                            mst1 = st.number_input("MST 1 Marks (G1)", 0.0, 100.0)
+                            mst2 = st.number_input("MST 2 Marks (G2)", 0.0, 100.0)
+                            finals = st.number_input("Finals Marks (G3)", 0.0, 100.0)
+                            
                             if st.form_submit_button("Override Marks", use_container_width=True):
                                 res = admin_override_marks(token, {
-                                    "roll_no": search_rno, "subject": subj, 
-                                    "mst_marks": mst, "finals_marks": finals
+                                    "roll_no": search_rno, 
+                                    "subject": subj, 
+                                    "mst1_marks": mst1, 
+                                    "mst2_marks": mst2,
+                                    "finals_marks": finals
                                 })
                                 if res.status_code == 200:
                                     st.success("Marks overridden and logged!")
+                                else:
+                                    st.error("Error overriding marks.")
                                     
                     # Override Attendance
                     with col_a:
